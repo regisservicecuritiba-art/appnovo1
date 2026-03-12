@@ -1,0 +1,8 @@
+{
+  "name": "Service Refrigeração App",
+  "description": "Sistema PWA profissional para gestão de serviços de climatização, ordens de serviço e PMOC.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

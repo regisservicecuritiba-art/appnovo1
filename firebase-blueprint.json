@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "Client": {
+      "title": "Cliente",
+      "description": "Dados do cliente",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "document": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "type": { "type": "string" }
+      },
+      "required": ["name", "type"]
+    },
+    "Machine": {
+      "title": "Equipamento",
+      "description": "Dados do equipamento",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "type": { "type": "string" },
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "capacityBTU": { "type": "number" },
+        "serialNumber": { "type": "string" },
+        "location": { "type": "string" },
+        "installDate": { "type": "string" },
+        "warrantyEnd": { "type": "string" },
+        "technicianId": { "type": "string" },
+        "qrCodeData": { "type": "string" }
+      },
+      "required": ["clientId", "type", "brand"]
+    },
+    "ServiceOrder": {
+      "title": "Ordem de Serviço",
+      "description": "Dados da OS",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "machineId": { "type": "string" },
+        "technicianId": { "type": "string" },
+        "type": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string" },
+        "total": { "type": "number" },
+        "paymentMethod": { "type": "string" }
+      },
+      "required": ["clientId", "machineId", "status"]
+    },
+    "Part": {
+      "title": "Peça",
+      "description": "Dados da peça/produto",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "category": { "type": "string" },
+        "unitValue": { "type": "number" },
+        "costPrice": { "type": "number" },
+        "unit": { "type": "string" },
+        "stock": { "type": "number" },
+        "minStock": { "type": "number" }
+      },
+      "required": ["name", "unitValue"]
+    },
+    "User": {
+      "title": "Usuário",
+      "description": "Dados do perfil do usuário",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "avatar": { "type": "string" }
+      },
+      "required": ["email", "name", "role"]
+    }
+  },
+  "firestore": {
+    "/clients": { "schema": "Client", "description": "Coleção de clientes" },
+    "/machines": { "schema": "Machine", "description": "Coleção de equipamentos" },
+    "/orders": { "schema": "ServiceOrder", "description": "Coleção de ordens de serviço" },
+    "/parts": { "schema": "Part", "description": "Coleção de peças" },
+    "/users": { "schema": "User", "description": "Coleção de perfis de usuários" }
+  }
+}

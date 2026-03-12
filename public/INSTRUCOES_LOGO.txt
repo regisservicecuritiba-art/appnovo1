@@ -1,0 +1,1 @@
+Arraste o arquivo logo.png para dentro desta pasta para atualizar o ícone do aplicativo.
