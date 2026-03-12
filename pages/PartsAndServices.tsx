@@ -10,6 +10,8 @@ export const Parts: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showPartModal, setShowPartModal] = useState(false);
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'part' | 'service' } | null>(null);
   const [loading, setLoading] = useState(false);
   
   // Form State - Parts
@@ -113,14 +115,27 @@ export const Parts: React.FC = () => {
   };
 
   const handleDeletePart = async (id: string) => {
-      if (window.confirm('Tem certeza que deseja excluir este item permanentemente?')) {
-          await dbService.deletePart(id);
-      }
+      setItemToDelete({ id, type: 'part' });
+      setShowDeleteModal(true);
   };
 
   const handleDeleteService = async (id: string) => {
-      if (window.confirm('Tem certeza que deseja excluir este serviço permanentemente?')) {
-          await dbService.deleteService(id);
+      setItemToDelete({ id, type: 'service' });
+      setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+      if (!itemToDelete) return;
+      try {
+          if (itemToDelete.type === 'part') {
+              await dbService.deletePart(itemToDelete.id);
+          } else {
+              await dbService.deleteService(itemToDelete.id);
+          }
+          setShowDeleteModal(false);
+          setItemToDelete(null);
+      } catch (err) {
+          console.error("Error deleting item:", err);
       }
   };
 
@@ -288,6 +303,30 @@ export const Parts: React.FC = () => {
              </table>
          </div>
       </div>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Confirmar Exclusão</h2>
+            <p className="text-gray-600 mb-6">Tem certeza que deseja excluir este {itemToDelete?.type === 'part' ? 'item' : 'serviço'} permanentemente? Esta ação não pode ser desfeita localmente.</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Part Modal */}
       {showPartModal && (

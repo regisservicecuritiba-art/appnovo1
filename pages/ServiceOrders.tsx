@@ -7,6 +7,7 @@ import { Logo } from '../components/Logo';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 import { Plus, CheckSquare, Wrench, DollarSign, Calendar, Save, Trash2, Printer, Search, X, Package, Play, CheckCircle, Banknote, Ban, Eye, Filter, User as UserIcon, MapPin, FileText, Loader2 } from 'lucide-react';
+import { Modal } from '../components/Modal';
 
 const DEFAULT_CHECKLIST: ChecklistItem[] = [
   { label: 'Limpeza de filtros', checked: false, notes: '' },
@@ -37,6 +38,40 @@ export const ServiceOrders: React.FC = () => {
   
   const [printingOrder, setPrintingOrder] = useState<ServiceOrder | null>(null);
   const location = useLocation();
+
+  // Modal State
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'error' | 'confirm';
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
+
+  const showAlert = (title: string, message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+    setModalConfig({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm: undefined
+    });
+  };
+
+  const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setModalConfig({
+      isOpen: true,
+      title,
+      message,
+      type: 'confirm',
+      onConfirm
+    });
+  };
 
   // Form State
   const [clientId, setClientId] = useState('');
@@ -168,7 +203,7 @@ export const ServiceOrders: React.FC = () => {
     const finalMachineId = isInstallation ? selectedMachineIds[0] : machineId;
     
     if (!clientId || (!finalMachineId && !isInstallation) || (isInstallation && selectedMachineIds.length === 0) || !technicianId) {
-        alert('Por favor, preencha o cliente, a(s) máquina(s) e o técnico responsável.');
+        showAlert('Campos Obrigatórios', 'Por favor, preencha o cliente, a(s) máquina(s) e o técnico responsável.', 'warning');
         return;
     }
 
@@ -214,7 +249,7 @@ export const ServiceOrders: React.FC = () => {
         alert('Ordem de Serviço gerada com sucesso!');
     } catch (err: any) {
         console.error('Exception saving OS:', err);
-        alert('Erro ao salvar OS: ' + err.message);
+        showAlert('Erro', 'Erro ao salvar OS: ' + err.message, 'error');
     }
   };
 
@@ -238,7 +273,7 @@ export const ServiceOrders: React.FC = () => {
             setViewOrder(updatedOS);
         }
     } catch (err: any) {
-        alert('Erro ao atualizar status: ' + err.message);
+        showAlert('Erro', 'Erro ao atualizar status: ' + err.message, 'error');
     }
   };
 
@@ -519,7 +554,11 @@ export const ServiceOrders: React.FC = () => {
                                     <button onClick={() => handlePrint(os)} className="text-gray-400 hover:text-brand-blue p-1" title="Imprimir"><Printer size={18}/></button>
                                     {os.status !== OSStatus.PAGO && os.status !== OSStatus.CANCELADA && (
                                         <button 
-                                            onClick={() => updateOSStatus(os.id, OSStatus.CANCELADA)} 
+                                            onClick={() => showConfirm(
+                                                'Cancelar OS', 
+                                                'Tem certeza que deseja cancelar esta OS?', 
+                                                () => updateOSStatus(os.id, OSStatus.CANCELADA)
+                                            )} 
                                             className="text-gray-400 hover:text-red-500 p-1" 
                                             title="Cancelar OS"
                                         >
@@ -648,11 +687,11 @@ export const ServiceOrders: React.FC = () => {
                                 </button>
                                 {viewOrder.status !== OSStatus.CANCELADA && viewOrder.status !== OSStatus.PAGO && (
                                     <button 
-                                        onClick={() => {
-                                            if(window.confirm('Tem certeza que deseja cancelar esta OS?')) {
-                                                updateOSStatus(viewOrder.id, OSStatus.CANCELADA);
-                                            }
-                                        }}
+                                        onClick={() => showConfirm(
+                                            'Cancelar OS', 
+                                            'Tem certeza que deseja cancelar esta OS?', 
+                                            () => updateOSStatus(viewOrder.id, OSStatus.CANCELADA)
+                                        )}
                                         className="py-2.5 px-4 border border-red-200 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100"
                                         title="Cancelar"
                                     >

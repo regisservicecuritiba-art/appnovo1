@@ -11,6 +11,8 @@ export const Clients: React.FC = () => {
   
   // Modals State
   const [showAddClientModal, setShowAddClientModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -110,15 +112,22 @@ export const Clients: React.FC = () => {
   };
 
   const handleDeleteClient = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+    setClientToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteClient = async () => {
+    if (!clientToDelete) return;
     try {
-      await dbService.deleteClient(id);
-      if (selectedClient?.id === id) {
+      await dbService.deleteClient(clientToDelete);
+      if (selectedClient?.id === clientToDelete) {
         setSelectedClient(null);
       }
+      setShowDeleteModal(false);
+      setClientToDelete(null);
     } catch (err) {
       console.error('Erro ao excluir cliente:', err);
-      alert('Erro ao excluir cliente');
+      // Fallback to console instead of alert
     }
   };
 
@@ -241,6 +250,30 @@ export const Clients: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Confirmar Exclusão</h2>
+            <p className="text-gray-600 mb-6">Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita localmente.</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmDeleteClient}
+                className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CREATE CLIENT MODAL */}
       {showAddClientModal && (

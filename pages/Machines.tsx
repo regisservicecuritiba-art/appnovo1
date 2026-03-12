@@ -9,6 +9,8 @@ export const Machines: React.FC = () => {
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newMachine, setNewMachine] = useState<Partial<Machine>>({ type: 'Split', clientId: '' });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [machineToDelete, setMachineToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubMachines = dbService.subscribeMachines(setMachines);
@@ -85,17 +87,16 @@ export const Machines: React.FC = () => {
                      >
                        <QrCode size={20} />
                      </button>
-                     <button 
-                      onClick={async () => {
-                        if (confirm('Deseja excluir esta máquina?')) {
-                          await dbService.deleteMachine(machine.id);
-                        }
-                      }}
-                      className="text-gray-400 hover:text-red-500 p-1"
-                      title="Excluir Máquina"
-                     >
-                       <Trash2 size={20} />
-                     </button>
+                      <button 
+                        onClick={() => {
+                          setMachineToDelete(machine.id);
+                          setShowDeleteModal(true);
+                        }}
+                        className="text-gray-400 hover:text-red-500 p-1"
+                        title="Excluir Máquina"
+                      >
+                        <Trash2 size={20} />
+                      </button>
                    </div>
                 </div>
                 <h3 className="font-bold text-gray-800">{machine.brand} - {machine.model}</h3>
@@ -117,6 +118,36 @@ export const Machines: React.FC = () => {
            );
         })}
       </div>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Confirmar Exclusão</h2>
+            <p className="text-gray-600 mb-6">Tem certeza que deseja excluir esta máquina? Esta ação não pode ser desfeita localmente.</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={async () => {
+                  if (machineToDelete) {
+                    await dbService.deleteMachine(machineToDelete);
+                    setShowDeleteModal(false);
+                    setMachineToDelete(null);
+                  }
+                }}
+                className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ADD MODAL */}
       {showAddModal && (
