@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/db';
 import { Machine, Client } from '../types';
-import { QrCode, Plus, Fan, Tag, Printer, X } from 'lucide-react';
+import { QrCode, Plus, Fan, Tag, Printer, X, Trash2 } from 'lucide-react';
 
 export const Machines: React.FC = () => {
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -77,13 +77,26 @@ export const Machines: React.FC = () => {
                    <div className="p-2 bg-blue-50 rounded-lg text-brand-blue">
                      <Fan size={24} />
                    </div>
-                   <button 
-                    onClick={() => setSelectedMachine(machine)}
-                    className="text-gray-400 hover:text-gray-800 p-1"
-                    title="Ver QR Code"
-                   >
-                     <QrCode size={20} />
-                   </button>
+                   <div className="flex gap-1">
+                     <button 
+                      onClick={() => setSelectedMachine(machine)}
+                      className="text-gray-400 hover:text-gray-800 p-1"
+                      title="Ver QR Code"
+                     >
+                       <QrCode size={20} />
+                     </button>
+                     <button 
+                      onClick={async () => {
+                        if (confirm('Deseja excluir esta máquina?')) {
+                          await dbService.deleteMachine(machine.id);
+                        }
+                      }}
+                      className="text-gray-400 hover:text-red-500 p-1"
+                      title="Excluir Máquina"
+                     >
+                       <Trash2 size={20} />
+                     </button>
+                   </div>
                 </div>
                 <h3 className="font-bold text-gray-800">{machine.brand} - {machine.model}</h3>
                 <p className="text-xs text-gray-500 mb-2">{machine.type} • {machine.capacityBTU} BTUs</p>

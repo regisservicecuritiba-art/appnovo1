@@ -111,7 +111,15 @@ export const Clients: React.FC = () => {
 
   const handleDeleteClient = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
-    // Implement delete in dbService if needed
+    try {
+      await dbService.deleteClient(id);
+      if (selectedClient?.id === id) {
+        setSelectedClient(null);
+      }
+    } catch (err) {
+      console.error('Erro ao excluir cliente:', err);
+      alert('Erro ao excluir cliente');
+    }
   };
 
   const handleAddMachine = async (e: React.FormEvent) => {
