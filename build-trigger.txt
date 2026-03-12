@@ -1,1 +1,1 @@
-Build trigger: 2026-03-12 12:27
+Build trigger: Fix netlify.toml config 2026-03-12 12:40
