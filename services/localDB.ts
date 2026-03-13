@@ -22,13 +22,13 @@ export class LocalDatabase extends Dexie {
 
   constructor() {
     super('RefriServiceDB');
-    this.version(1).stores({
+    this.version(2).stores({
       clients: 'id, name, email',
-      machines: 'id, clientId, serialNumber',
+      machines: 'id, clientId, serialNumber, location',
       parts: 'id, name, code',
       services: 'id, name',
       service_orders: 'id, clientId, status, date',
-      pmocs: 'id, clientId, status, date',
+      pmocs: 'id, clientId, status, date, createdAt',
       maintenance_sessions: 'id, order_id, status, created_at',
       users: 'id, email, name',
       pending_sync: '++id, table, action, timestamp'
