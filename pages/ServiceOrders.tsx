@@ -95,6 +95,7 @@ export const ServiceOrders: React.FC = () => {
   const [showServiceSelector, setShowServiceSelector] = useState(false);
   const [serviceSearchTerm, setServiceSearchTerm] = useState('');
   const [allServices, setAllServices] = useState<ServiceCatalog[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
     const unsubOrders = dbService.subscribeOrders(setOrders);
@@ -117,6 +118,13 @@ export const ServiceOrders: React.FC = () => {
       unsubPMOCs();
     };
   }, []);
+
+  useEffect(() => {
+    if (auth.currentUser && users.length > 0) {
+      const user = users.find(u => u.id === auth.currentUser?.uid);
+      if (user) setCurrentUser(user);
+    }
+  }, [users]);
 
   // Handle Navigation State (Pre-fill form)
   useEffect(() => {
@@ -210,7 +218,7 @@ export const ServiceOrders: React.FC = () => {
     try {
         const newOS: Omit<ServiceOrder, 'id'> = {
           clientId,
-          machineId: finalMachineId || null,
+          machineId: finalMachineId || '',
           technicianId,
           type: osType,
           date: new Date().toISOString(),
@@ -246,10 +254,20 @@ export const ServiceOrders: React.FC = () => {
         setDiscount(0);
         setChecklist(DEFAULT_CHECKLIST);
         
-        alert('Ordem de Serviço gerada com sucesso!');
+        showAlert('Sucesso', 'Ordem de Serviço gerada com sucesso!', 'success');
     } catch (err: any) {
         console.error('Exception saving OS:', err);
         showAlert('Erro', 'Erro ao salvar OS: ' + err.message, 'error');
+    }
+  };
+
+  const handleDeleteOS = async (id: string) => {
+    try {
+      await dbService.deleteOrder(id);
+      if (viewOrder && viewOrder.id === id) setViewOrder(null);
+      showAlert('Sucesso', 'Ordem de serviço excluída com sucesso.', 'success');
+    } catch (err: any) {
+      showAlert('Erro', 'Erro ao excluir OS: ' + err.message, 'error');
     }
   };
 
@@ -565,6 +583,19 @@ export const ServiceOrders: React.FC = () => {
                                             <Ban size={18}/>
                                         </button>
                                     )}
+                                    {currentUser?.role === 'ADMIN' && (
+                                        <button 
+                                            onClick={() => showConfirm(
+                                                'Excluir OS', 
+                                                'Tem certeza que deseja EXCLUIR permanentemente esta OS? Esta ação não pode ser desfeita.', 
+                                                () => handleDeleteOS(os.id)
+                                            )} 
+                                            className="text-gray-400 hover:text-red-700 p-1" 
+                                            title="Excluir OS"
+                                        >
+                                            <Trash2 size={18}/>
+                                        </button>
+                                    )}
                                 </div>
                             </td>
                         </tr>
@@ -698,7 +729,20 @@ export const ServiceOrders: React.FC = () => {
                                         <Ban size={18} />
                                     </button>
                                 )}
-                           </div>
+                                {currentUser?.role === 'ADMIN' && (
+                                    <button 
+                                        onClick={() => showConfirm(
+                                            'Excluir OS', 
+                                            'Tem certeza que deseja EXCLUIR permanentemente esta OS? Esta ação não pode ser desfeita.', 
+                                            () => handleDeleteOS(viewOrder.id)
+                                        )}
+                                        className="py-2.5 px-4 border border-red-200 bg-red-700 text-white rounded-lg font-medium hover:bg-red-800"
+                                        title="Excluir"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                )}
+                            </div>
                            <button 
                                 onClick={() => setViewOrder(null)}
                                 className="w-full py-2 text-gray-400 text-xs font-medium hover:text-gray-600 transition-colors"
@@ -1286,6 +1330,15 @@ export const ServiceOrders: React.FC = () => {
               </div>
           </div>
       )}
+
+      <Modal 
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        onConfirm={modalConfig.onConfirm}
+      />
     </div>
   );
 };
