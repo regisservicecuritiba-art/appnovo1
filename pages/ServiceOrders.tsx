@@ -5,8 +5,7 @@ import { auth } from '../services/firebase';
 import { ServiceOrder, Machine, ChecklistItem, PartUsed, ServiceItem, OSStatus, Part, Client, User, ServiceCatalog } from '../types';
 import { Logo } from '../components/Logo';
 // @ts-ignore
-import html2pdf from 'html2pdf.js';
-import { Plus, CheckSquare, Wrench, DollarSign, Calendar, Save, Trash2, Printer, Search, X, Package, Play, CheckCircle, Banknote, Ban, Eye, Filter, User as UserIcon, MapPin, FileText, Loader2 } from 'lucide-react';
+import { Plus, CheckSquare, Wrench, DollarSign, Calendar, Save, Trash2, Printer, Search, X, Package, Play, CheckCircle, Banknote, Ban, Eye, Filter, User as UserIcon, MapPin, FileText } from 'lucide-react';
 import { Modal } from '../components/Modal';
 
 const DEFAULT_CHECKLIST: ChecklistItem[] = [
@@ -35,7 +34,6 @@ export const ServiceOrders: React.FC = () => {
   const [clientSearch, setClientSearch] = useState<string>('');
   const [viewOrder, setViewOrder] = useState<ServiceOrder | null>(null);
   const [receiptOrder, setReceiptOrder] = useState<ServiceOrder | null>(null);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   
   const [printingOrder, setPrintingOrder] = useState<ServiceOrder | null>(null);
   const location = useLocation();
@@ -892,118 +890,12 @@ export const ServiceOrders: React.FC = () => {
                   </div>
 
                   <div className="p-8 bg-gray-50 rounded-b-3xl border-t flex flex-col gap-4 no-print">
-                      <div className="flex flex-col sm:flex-row gap-4">
-                          <button 
-                            onClick={() => window.print()}
-                            className="flex-1 py-4 bg-gray-900 text-white font-bold rounded-2xl shadow-xl hover:bg-black flex items-center justify-center gap-2 transition-all transform active:scale-95"
-                          >
-                            <Printer size={20} /> Imprimir Recibo
-                          </button>
-                          <button 
-                            disabled={isGeneratingPDF}
-                            onClick={async () => {
-                                const element = document.getElementById('receipt-content');
-                                if (element && receiptOrder) {
-                                    setIsGeneratingPDF(true);
-                                    
-                                    // Temporarily remove overflow and fixed height to capture full content
-                                    const originalStyle = element.style.cssText;
-                                    element.style.overflow = 'visible';
-                                    element.style.height = 'auto';
-                                    element.style.maxHeight = 'none';
-
-                                    // Temporarily show print header for PDF capture
-                                    const printHeader = document.getElementById('receipt-print-header');
-                                    if (printHeader) {
-                                        printHeader.classList.remove('hidden');
-                                        printHeader.classList.add('flex');
-                                    }
-
-                                    const opt = {
-                                        margin: 10,
-                                        filename: `Recibo_${receiptOrder.id.substring(0,8).toUpperCase()}.pdf`,
-                                        image: { type: 'jpeg', quality: 0.98 },
-                                        html2canvas: { 
-                                            scale: 2, 
-                                            useCORS: true, 
-                                            allowTaint: true,
-                                            scrollX: 0,
-                                            scrollY: 0,
-                                            logging: false,
-                                            letterRendering: true,
-                                            onclone: (clonedDoc: Document) => {
-                                                // Inject a style that overrides common colors and fixes layout for PDF
-                                                const style = clonedDoc.createElement('style');
-                                                style.innerHTML = `
-                                                    * { 
-                                                        -webkit-print-color-adjust: exact !important;
-                                                        color-adjust: exact !important;
-                                                        font-family: Arial, sans-serif !important;
-                                                    }
-                                                    /* Fallback for common oklch colors used by Tailwind */
-                                                    .text-brand-blue { color: #007BFF !important; }
-                                                    .text-brand-orange { color: #FF7A00 !important; }
-                                                    .bg-brand-blue { background-color: #007BFF !important; }
-                                                    .bg-brand-orange { background-color: #FF7A00 !important; }
-                                                    
-                                                    /* Ensure background colors are captured */
-                                                    [style*="oklch"] {
-                                                        background-color: #ffffff !important;
-                                                        color: #333333 !important;
-                                                        border-color: #cccccc !important;
-                                                    }
-                                                `;
-                                                clonedDoc.head.appendChild(style);
-
-                                                // Remove problematic elements if any
-                                                const svgs = clonedDoc.querySelectorAll('svg');
-                                                svgs.forEach(svg => {
-                                                    svg.setAttribute('width', svg.getBoundingClientRect().width.toString());
-                                                    svg.setAttribute('height', svg.getBoundingClientRect().height.toString());
-                                                });
-                                            }
-                                        },
-                                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                                    };
-                                    
-                                    try {
-                                        console.log('Iniciando geração de PDF...');
-                                        // Use a promise with timeout to prevent infinite hang
-                                        const pdfPromise = html2pdf().set(opt).from(element).save();
-                                        const timeoutPromise = new Promise((_, reject) => 
-                                            setTimeout(() => reject(new Error('O processo demorou muito (Timeout)')), 45000)
-                                        );
-                                        
-                                        await Promise.race([pdfPromise, timeoutPromise]);
-                                        console.log('PDF gerado com sucesso!');
-                                    } catch (err: any) {
-                                        console.error('Erro detalhado ao gerar PDF:', err);
-                                        // Mensagem bem distinta para confirmar que o código novo está rodando
-                                        alert('Falha na geração do PDF: ' + (err.message || 'Erro interno no gerador'));
-                                    } finally {
-                                        // Restore original styles
-                                        element.style.cssText = originalStyle;
-                                        if (printHeader) {
-                                            printHeader.classList.add('hidden');
-                                            printHeader.classList.remove('flex');
-                                        }
-                                        setIsGeneratingPDF(false);
-                                    }
-                                }
-                            }}
-                            className={`flex-1 py-4 text-white font-bold rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 ${isGeneratingPDF ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-                          >
-                            {isGeneratingPDF ? (
-                                <>
-                                    <Loader2 size={20} className="animate-spin" /> Gerando...
-                                </>
-                            ) : (
-                                <>
-                                    <FileText size={20} /> Gerar PDF
-                                </>
-                            )}
-                          </button>
-                      </div>
+                      <button 
+                        onClick={() => window.print()}
+                        className="w-full py-4 bg-gray-900 text-white font-bold rounded-2xl shadow-xl hover:bg-black flex items-center justify-center gap-2 transition-all transform active:scale-95"
+                      >
+                        <Printer size={20} /> Imprimir Recibo
+                      </button>
                       <button 
                         onClick={() => setReceiptOrder(null)}
                         className="w-full py-3 text-gray-500 font-bold hover:text-gray-700 transition-colors no-print"
