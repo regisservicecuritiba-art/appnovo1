@@ -926,39 +926,40 @@ export const ServiceOrders: React.FC = () => {
                                         html2canvas: { 
                                             scale: 2, 
                                             useCORS: true, 
+                                            allowTaint: true,
+                                            scrollX: 0,
+                                            scrollY: 0,
                                             logging: false,
                                             letterRendering: true,
                                             onclone: (clonedDoc: Document) => {
-                                                // Faster way to handle oklch: inject a style that overrides common colors
-                                                // and replace any inline oklch styles more efficiently
+                                                // Inject a style that overrides common colors and fixes layout for PDF
                                                 const style = clonedDoc.createElement('style');
                                                 style.innerHTML = `
                                                     * { 
                                                         -webkit-print-color-adjust: exact !important;
                                                         color-adjust: exact !important;
+                                                        font-family: Arial, sans-serif !important;
                                                     }
                                                     /* Fallback for common oklch colors used by Tailwind */
                                                     .text-brand-blue { color: #007BFF !important; }
                                                     .text-brand-orange { color: #FF7A00 !important; }
                                                     .bg-brand-blue { background-color: #007BFF !important; }
                                                     .bg-brand-orange { background-color: #FF7A00 !important; }
+                                                    
+                                                    /* Ensure background colors are captured */
+                                                    [style*="oklch"] {
+                                                        background-color: #ffffff !important;
+                                                        color: #333333 !important;
+                                                        border-color: #cccccc !important;
+                                                    }
                                                 `;
                                                 clonedDoc.head.appendChild(style);
 
-                                                // Only iterate over elements that likely have oklch (those with inline styles)
-                                                const styledElements = clonedDoc.querySelectorAll('[style*="oklch"]');
-                                                styledElements.forEach((el: any) => {
-                                                    const s = el.style;
-                                                    for (let i = 0; i < s.length; i++) {
-                                                        const prop = s[i];
-                                                        const val = s.getPropertyValue(prop);
-                                                        if (val.includes('oklch')) {
-                                                            // Simple regex replacement for oklch to a safe color (e.g., gray or a close match)
-                                                            // Since we can't easily convert oklch to hex in a simple regex, 
-                                                            // we'll just strip the oklch and use a fallback or try a simpler conversion
-                                                            s.setProperty(prop, 'inherit', 'important');
-                                                        }
-                                                    }
+                                                // Remove problematic elements if any
+                                                const svgs = clonedDoc.querySelectorAll('svg');
+                                                svgs.forEach(svg => {
+                                                    svg.setAttribute('width', svg.getBoundingClientRect().width.toString());
+                                                    svg.setAttribute('height', svg.getBoundingClientRect().height.toString());
                                                 });
                                             }
                                         },
@@ -966,16 +967,19 @@ export const ServiceOrders: React.FC = () => {
                                     };
                                     
                                     try {
+                                        console.log('Iniciando geração de PDF...');
                                         // Use a promise with timeout to prevent infinite hang
                                         const pdfPromise = html2pdf().set(opt).from(element).save();
                                         const timeoutPromise = new Promise((_, reject) => 
-                                            setTimeout(() => reject(new Error('Timeout ao gerar PDF')), 30000)
+                                            setTimeout(() => reject(new Error('O processo demorou muito (Timeout)')), 45000)
                                         );
                                         
                                         await Promise.race([pdfPromise, timeoutPromise]);
+                                        console.log('PDF gerado com sucesso!');
                                     } catch (err: any) {
-                                        console.error('Erro ao gerar PDF:', err);
-                                        alert('Erro ao gerar PDF: ' + (err.message || 'Erro desconhecido'));
+                                        console.error('Erro detalhado ao gerar PDF:', err);
+                                        // Mensagem bem distinta para confirmar que o código novo está rodando
+                                        alert('Falha na geração do PDF: ' + (err.message || 'Erro interno no gerador'));
                                     } finally {
                                         // Restore original styles
                                         element.style.cssText = originalStyle;
