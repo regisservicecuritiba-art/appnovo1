@@ -425,7 +425,7 @@ export const Clients: React.FC = () => {
                        <form onSubmit={handleAddMachine} className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           <input required placeholder="Marca (ex: LG)" className="p-2 border rounded text-sm" value={newMachine.brand || ''} onChange={e => setNewMachine({...newMachine, brand: e.target.value})} />
                           <input required placeholder="Modelo" className="p-2 border rounded text-sm" value={newMachine.model || ''} onChange={e => setNewMachine({...newMachine, model: e.target.value})} />
-                          <input type="number" placeholder="BTUs" className="p-2 border rounded text-sm" value={newMachine.capacityBTU || ''} onChange={e => setNewMachine({...newMachine, capacityBTU: Number(e.target.value)})} />
+                          <input type="number" placeholder="BTUs" className="p-2 border rounded text-sm" value={newMachine.capacityBTU || ''} onFocus={(e) => e.target.select()} onChange={e => setNewMachine({...newMachine, capacityBTU: Number(e.target.value)})} />
                           <select className="p-2 border rounded text-sm" value={newMachine.type} onChange={e => setNewMachine({...newMachine, type: e.target.value as any})}>
                              <option>Split</option><option>Cassete</option><option>Piso Teto</option><option>VRF</option><option>Janela</option>
                           </select>

@@ -181,7 +181,7 @@ export const Machines: React.FC = () => {
                </div>
                <div>
                   <label className="block text-sm font-medium text-gray-700">BTUs</label>
-                  <input type="number" className="w-full p-2 border rounded-lg" value={newMachine.capacityBTU || ''} onChange={e => setNewMachine({...newMachine, capacityBTU: Number(e.target.value)})} />
+                  <input type="number" className="w-full p-2 border rounded-lg" value={newMachine.capacityBTU || ''} onFocus={(e) => e.target.select()} onChange={e => setNewMachine({...newMachine, capacityBTU: Number(e.target.value)})} />
                </div>
                <div>
                   <label className="block text-sm font-medium text-gray-700">Nº Série</label>

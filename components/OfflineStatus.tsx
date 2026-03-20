@@ -1,32 +1,16 @@
 import React from 'react';
-import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
 import { useOfflineSync } from '../src/hooks/useOfflineSync';
 
 export const OfflineStatus: React.FC = () => {
-  const { isOnline, isSyncing } = useOfflineSync();
+  const { isOnline } = useOfflineSync();
 
-  if (isOnline && !isSyncing) return null;
+  if (isOnline) return null;
 
   return (
-    <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg text-white font-medium transition-all ${
-      isOnline ? 'bg-blue-600' : 'bg-red-600'
-    }`}>
-      {isSyncing ? (
-        <>
-          <RefreshCw size={18} className="animate-spin" />
-          <span>Sincronizando...</span>
-        </>
-      ) : !isOnline ? (
-        <>
-          <WifiOff size={18} />
-          <span>Modo Offline</span>
-        </>
-      ) : (
-        <>
-          <Wifi size={18} />
-          <span>Online</span>
-        </>
-      )}
+    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-1.5 px-3 py-1 rounded-md shadow-sm bg-red-600 text-white text-xs font-bold uppercase tracking-wider">
+      <WifiOff size={12} />
+      <span>OFFLine</span>
     </div>
   );
 };

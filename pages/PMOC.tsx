@@ -359,6 +359,7 @@ export const PMOC: React.FC = () => {
                               step="0.1" 
                               className="w-full pl-7 p-2 border rounded-lg" 
                               value={readings.tempIn} 
+                              onFocus={(e) => e.target.select()}
                               onChange={e => setReadings({...readings, tempIn: e.target.value})} 
                               required
                             />
@@ -373,6 +374,7 @@ export const PMOC: React.FC = () => {
                               step="0.1" 
                               className="w-full pl-7 p-2 border rounded-lg" 
                               value={readings.tempOut} 
+                              onFocus={(e) => e.target.select()}
                               onChange={e => setReadings({...readings, tempOut: e.target.value})} 
                               required
                             />
@@ -398,6 +400,7 @@ export const PMOC: React.FC = () => {
                               step="0.1" 
                               className="w-full pl-7 p-2 border rounded-lg" 
                               value={readings.current} 
+                              onFocus={(e) => e.target.select()}
                               onChange={e => setReadings({...readings, current: e.target.value})} 
                               required
                             />

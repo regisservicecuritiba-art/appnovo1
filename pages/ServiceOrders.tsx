@@ -35,6 +35,7 @@ export const ServiceOrders: React.FC = () => {
   const [clientSearch, setClientSearch] = useState<string>('');
   const [viewOrder, setViewOrder] = useState<ServiceOrder | null>(null);
   const [receiptOrder, setReceiptOrder] = useState<ServiceOrder | null>(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   
   const [printingOrder, setPrintingOrder] = useState<ServiceOrder | null>(null);
   const location = useLocation();
@@ -899,9 +900,11 @@ export const ServiceOrders: React.FC = () => {
                             <Printer size={20} /> Imprimir Recibo
                           </button>
                           <button 
+                            disabled={isGeneratingPDF}
                             onClick={async () => {
                                 const element = document.getElementById('receipt-content');
                                 if (element) {
+                                    setIsGeneratingPDF(true);
                                     // Temporarily remove overflow and fixed height to capture full content
                                     const originalStyle = element.style.cssText;
                                     element.style.overflow = 'visible';
@@ -926,68 +929,40 @@ export const ServiceOrders: React.FC = () => {
                                             scrollY: 0,
                                             windowHeight: element.scrollHeight,
                                             onclone: (clonedDoc: Document) => {
-                                                // Aggressive replacement of oklch in the entire cloned document
-                                                const canvas = document.createElement('canvas');
-                                                const ctx = canvas.getContext('2d');
-                                                
-                                                const convert = (val: string) => {
-                                                    if (!val || !val.includes('oklch')) return val;
-                                                    return val.replace(/oklch\([^)]+\)/g, (m) => {
-                                                        if (!ctx) return m;
-                                                        try {
-                                                            ctx.fillStyle = m;
-                                                            const res = ctx.fillStyle;
-                                                            return res.includes('oklch') ? m : res;
-                                                        } catch (e) {
-                                                            return m;
-                                                        }
-                                                    });
-                                                };
-
-                                                // Fix all style tags
-                                                clonedDoc.querySelectorAll('style').forEach(s => {
-                                                    if (s.textContent?.includes('oklch')) {
-                                                        s.textContent = convert(s.textContent);
-                                                    }
-                                                });
-
-                                                // Fix all elements
-                                                clonedDoc.querySelectorAll('*').forEach(el => {
-                                                    if (el instanceof HTMLElement || el instanceof SVGElement) {
-                                                        // Inline styles
-                                                        for (let i = 0; i < el.style.length; i++) {
-                                                            const prop = el.style[i];
-                                                            const val = el.style.getPropertyValue(prop);
-                                                            if (val && val.includes('oklch')) {
-                                                                el.style.setProperty(prop, convert(val), 'important');
-                                                            }
-                                                        }
-                                                        
-                                                        // CSS Variables
-                                                        // Note: getComputedStyle might not work perfectly on cloned elements not in DOM
-                                                        // but we try our best.
-                                                        try {
-                                                            const style = window.getComputedStyle(el);
-                                                            for (let i = 0; i < style.length; i++) {
-                                                                const prop = style[i];
-                                                                if (prop.startsWith('--')) {
-                                                                    const val = style.getPropertyValue(prop);
-                                                                    if (val && val.includes('oklch')) {
-                                                                        el.style.setProperty(prop, convert(val), 'important');
-                                                                    }
-                                                                }
-                                                            }
-                                                        } catch (e) {}
-                                                    }
-                                                });
-                                                
-                                                // Final check: if oklch still exists in the HTML, do a string replacement
-                                                // This is a last resort but very effective for html2canvas
+                                                // Optimized replacement of oklch
                                                 const receiptContent = clonedDoc.getElementById('receipt-content');
                                                 if (receiptContent) {
-                                                    const html = receiptContent.innerHTML;
-                                                    if (html.includes('oklch')) {
-                                                        receiptContent.innerHTML = convert(html);
+                                                    const canvas = document.createElement('canvas');
+                                                    const ctx = canvas.getContext('2d');
+                                                    
+                                                    const convert = (val: string) => {
+                                                        if (!val || !val.includes('oklch')) return val;
+                                                        return val.replace(/oklch\([^)]+\)/g, (m) => {
+                                                            if (!ctx) return m;
+                                                            try {
+                                                                ctx.fillStyle = m;
+                                                                const res = ctx.fillStyle;
+                                                                return res.includes('oklch') ? m : res;
+                                                            } catch (e) {
+                                                                return m;
+                                                            }
+                                                        });
+                                                    };
+
+                                                    // Fix inline styles for all elements in the receipt
+                                                    const allElements = receiptContent.getElementsByTagName('*');
+                                                    for (let i = 0; i < allElements.length; i++) {
+                                                        const el = allElements[i];
+                                                        if (el instanceof HTMLElement || el instanceof SVGElement) {
+                                                            const style = el.style;
+                                                            for (let j = 0; j < style.length; j++) {
+                                                                const prop = style[j];
+                                                                const val = style.getPropertyValue(prop);
+                                                                if (val && val.includes('oklch')) {
+                                                                    style.setProperty(prop, convert(val), 'important');
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -999,6 +974,7 @@ export const ServiceOrders: React.FC = () => {
                                         await html2pdf().set(opt).from(element).save();
                                     } catch (err) {
                                         console.error('Erro ao gerar PDF:', err);
+                                        alert('Erro ao gerar PDF. Por favor, tente novamente.');
                                     } finally {
                                         // Restore original styles
                                         element.style.cssText = originalStyle;
@@ -1006,12 +982,21 @@ export const ServiceOrders: React.FC = () => {
                                             printHeader.classList.add('hidden');
                                             printHeader.classList.remove('flex');
                                         }
+                                        setIsGeneratingPDF(false);
                                     }
                                 }
                             }}
-                            className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-xl hover:bg-blue-700 flex items-center justify-center gap-2 transition-all transform active:scale-95"
+                            className={`flex-1 py-4 text-white font-bold rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 ${isGeneratingPDF ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                           >
-                            <FileText size={20} /> Gerar PDF
+                            {isGeneratingPDF ? (
+                                <>
+                                    <Loader2 size={20} className="animate-spin" /> Gerando...
+                                </>
+                            ) : (
+                                <>
+                                    <FileText size={20} /> Gerar PDF
+                                </>
+                            )}
                           </button>
                       </div>
                       <button 
@@ -1138,6 +1123,7 @@ export const ServiceOrders: React.FC = () => {
                                   type="number" 
                                   min="1"
                                   value={p.quantity} 
+                                  onFocus={(e) => e.target.select()}
                                   onChange={(e) => {
                                     const newParts = [...partsUsed];
                                     newParts[i].quantity = Number(e.target.value);
@@ -1203,6 +1189,7 @@ export const ServiceOrders: React.FC = () => {
                            <input 
                              type="number" 
                              value={discount} 
+                             onFocus={(e) => e.target.select()}
                              onChange={e => setDiscount(Number(e.target.value))}
                              className="block w-20 bg-gray-800 border-none rounded text-white text-sm p-1" 
                            />

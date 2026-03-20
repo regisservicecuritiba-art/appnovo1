@@ -373,6 +373,7 @@ export const Parts: React.FC = () => {
                                 step="0.01" 
                                 className="w-full pl-6 p-1 border rounded bg-white text-sm" 
                                 value={currentPart.costPrice} 
+                                onFocus={(e) => e.target.select()}
                                 onChange={e => setCurrentPart({...currentPart, costPrice: Number(e.target.value)})} 
                               />
                           </div>
@@ -388,6 +389,7 @@ export const Parts: React.FC = () => {
                                 required
                                 className="w-full pl-6 p-1 border rounded bg-white text-sm font-bold" 
                                 value={currentPart.unitValue} 
+                                onFocus={(e) => e.target.select()}
                                 onChange={e => setCurrentPart({...currentPart, unitValue: Number(e.target.value)})} 
                               />
                           </div>
@@ -395,13 +397,13 @@ export const Parts: React.FC = () => {
 
                       <div>
                           <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Estoque Atual</label>
-                          <input type="number" className="w-full p-2 border rounded-lg" value={currentPart.stock} onChange={e => setCurrentPart({...currentPart, stock: Number(e.target.value)})} />
+                          <input type="number" className="w-full p-2 border rounded-lg" value={currentPart.stock} onFocus={(e) => e.target.select()} onChange={e => setCurrentPart({...currentPart, stock: Number(e.target.value)})} />
                       </div>
 
                       <div className="flex gap-2">
                           <div className="w-2/3">
                               <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Estoque Mín.</label>
-                              <input type="number" className="w-full p-2 border rounded-lg" value={currentPart.minStock} onChange={e => setCurrentPart({...currentPart, minStock: Number(e.target.value)})} />
+                              <input type="number" className="w-full p-2 border rounded-lg" value={currentPart.minStock} onFocus={(e) => e.target.select()} onChange={e => setCurrentPart({...currentPart, minStock: Number(e.target.value)})} />
                           </div>
                           <div className="w-1/3">
                                <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Unid.</label>
@@ -464,6 +466,7 @@ export const Parts: React.FC = () => {
                                 required
                                 className="w-full pl-10 p-2 border rounded-lg bg-white font-bold text-lg" 
                                 value={currentService.value} 
+                                onFocus={(e) => e.target.select()}
                                 onChange={e => setCurrentService({...currentService, value: Number(e.target.value)})} 
                               />
                           </div>

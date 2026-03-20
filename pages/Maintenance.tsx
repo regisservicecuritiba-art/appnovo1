@@ -445,6 +445,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({ user }) => {
                         type="number" 
                         placeholder="Valor (R$)"
                         value={newServiceValue}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => setNewServiceValue(e.target.value)}
                         className="px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-brand-blue"
                       />
