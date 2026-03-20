@@ -903,8 +903,9 @@ export const ServiceOrders: React.FC = () => {
                             disabled={isGeneratingPDF}
                             onClick={async () => {
                                 const element = document.getElementById('receipt-content');
-                                if (element) {
+                                if (element && receiptOrder) {
                                     setIsGeneratingPDF(true);
+                                    
                                     // Temporarily remove overflow and fixed height to capture full content
                                     const originalStyle = element.style.cssText;
                                     element.style.overflow = 'visible';
@@ -921,60 +922,60 @@ export const ServiceOrders: React.FC = () => {
                                     const opt = {
                                         margin: 10,
                                         filename: `Recibo_${receiptOrder.id.substring(0,8).toUpperCase()}.pdf`,
-                                        image: { type: 'jpeg' as const, quality: 0.98 },
+                                        image: { type: 'jpeg', quality: 0.98 },
                                         html2canvas: { 
                                             scale: 2, 
                                             useCORS: true, 
                                             logging: false,
-                                            scrollY: 0,
-                                            windowHeight: element.scrollHeight,
+                                            letterRendering: true,
                                             onclone: (clonedDoc: Document) => {
-                                                // Optimized replacement of oklch
-                                                const receiptContent = clonedDoc.getElementById('receipt-content');
-                                                if (receiptContent) {
-                                                    const canvas = document.createElement('canvas');
-                                                    const ctx = canvas.getContext('2d');
-                                                    
-                                                    const convert = (val: string) => {
-                                                        if (!val || !val.includes('oklch')) return val;
-                                                        return val.replace(/oklch\([^)]+\)/g, (m) => {
-                                                            if (!ctx) return m;
-                                                            try {
-                                                                ctx.fillStyle = m;
-                                                                const res = ctx.fillStyle;
-                                                                return res.includes('oklch') ? m : res;
-                                                            } catch (e) {
-                                                                return m;
-                                                            }
-                                                        });
-                                                    };
+                                                // Faster way to handle oklch: inject a style that overrides common colors
+                                                // and replace any inline oklch styles more efficiently
+                                                const style = clonedDoc.createElement('style');
+                                                style.innerHTML = `
+                                                    * { 
+                                                        -webkit-print-color-adjust: exact !important;
+                                                        color-adjust: exact !important;
+                                                    }
+                                                    /* Fallback for common oklch colors used by Tailwind */
+                                                    .text-brand-blue { color: #007BFF !important; }
+                                                    .text-brand-orange { color: #FF7A00 !important; }
+                                                    .bg-brand-blue { background-color: #007BFF !important; }
+                                                    .bg-brand-orange { background-color: #FF7A00 !important; }
+                                                `;
+                                                clonedDoc.head.appendChild(style);
 
-                                                    // Fix inline styles for all elements in the receipt
-                                                    const allElements = receiptContent.getElementsByTagName('*');
-                                                    for (let i = 0; i < allElements.length; i++) {
-                                                        const el = allElements[i];
-                                                        if (el instanceof HTMLElement || el instanceof SVGElement) {
-                                                            const style = el.style;
-                                                            for (let j = 0; j < style.length; j++) {
-                                                                const prop = style[j];
-                                                                const val = style.getPropertyValue(prop);
-                                                                if (val && val.includes('oklch')) {
-                                                                    style.setProperty(prop, convert(val), 'important');
-                                                                }
-                                                            }
+                                                // Only iterate over elements that likely have oklch (those with inline styles)
+                                                const styledElements = clonedDoc.querySelectorAll('[style*="oklch"]');
+                                                styledElements.forEach((el: any) => {
+                                                    const s = el.style;
+                                                    for (let i = 0; i < s.length; i++) {
+                                                        const prop = s[i];
+                                                        const val = s.getPropertyValue(prop);
+                                                        if (val.includes('oklch')) {
+                                                            // Simple regex replacement for oklch to a safe color (e.g., gray or a close match)
+                                                            // Since we can't easily convert oklch to hex in a simple regex, 
+                                                            // we'll just strip the oklch and use a fallback or try a simpler conversion
+                                                            s.setProperty(prop, 'inherit', 'important');
                                                         }
                                                     }
-                                                }
+                                                });
                                             }
                                         },
-                                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
+                                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
                                     };
                                     
                                     try {
-                                        await html2pdf().set(opt).from(element).save();
-                                    } catch (err) {
+                                        // Use a promise with timeout to prevent infinite hang
+                                        const pdfPromise = html2pdf().set(opt).from(element).save();
+                                        const timeoutPromise = new Promise((_, reject) => 
+                                            setTimeout(() => reject(new Error('Timeout ao gerar PDF')), 30000)
+                                        );
+                                        
+                                        await Promise.race([pdfPromise, timeoutPromise]);
+                                    } catch (err: any) {
                                         console.error('Erro ao gerar PDF:', err);
-                                        alert('Erro ao gerar PDF. Por favor, tente novamente.');
+                                        alert('Erro ao gerar PDF: ' + (err.message || 'Erro desconhecido'));
                                     } finally {
                                         // Restore original styles
                                         element.style.cssText = originalStyle;
