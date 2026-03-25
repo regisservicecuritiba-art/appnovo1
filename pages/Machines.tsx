@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/db';
 import { Machine, Client } from '../types';
-import { QrCode, Plus, Fan, Tag, Printer, X, Trash2 } from 'lucide-react';
+import { QrCode, Plus, Fan, Tag, Printer, X, Trash2, Edit2 } from 'lucide-react';
 
 export const Machines: React.FC = () => {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [newMachine, setNewMachine] = useState<Partial<Machine>>({ type: 'Split', clientId: '' });
+  const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [machineToDelete, setMachineToDelete] = useState<string | null>(null);
 
@@ -46,11 +48,24 @@ export const Machines: React.FC = () => {
     try {
       await dbService.addMachine(machine as any);
       setShowAddModal(false);
-      // We don't have the ID here easily since addDoc returns a promise with the ref
-      // But the subscription will update the list
+      setNewMachine({ type: 'Split', clientId: '' });
     } catch (err) {
       console.error('Erro ao criar máquina:', err);
       alert('Erro ao criar máquina');
+    }
+  };
+
+  const handleUpdateMachine = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMachine || !editingMachine.brand || !editingMachine.model || !editingMachine.clientId) return;
+
+    try {
+      await dbService.updateMachine(editingMachine.id, editingMachine);
+      setShowEditModal(false);
+      setEditingMachine(null);
+    } catch (err) {
+      console.error('Erro ao atualizar máquina:', err);
+      alert('Erro ao atualizar máquina');
     }
   };
 
@@ -80,6 +95,16 @@ export const Machines: React.FC = () => {
                      <Fan size={24} />
                    </div>
                    <div className="flex gap-1">
+                     <button 
+                      onClick={() => {
+                        setEditingMachine(machine);
+                        setShowEditModal(true);
+                      }}
+                      className="text-gray-400 hover:text-brand-blue p-1"
+                      title="Editar Máquina"
+                     >
+                       <Edit2 size={20} />
+                     </button>
                      <button 
                       onClick={() => setSelectedMachine(machine)}
                       className="text-gray-400 hover:text-gray-800 p-1"
@@ -192,6 +217,54 @@ export const Machines: React.FC = () => {
                   <input className="w-full p-2 border rounded-lg" value={newMachine.location || ''} onChange={e => setNewMachine({...newMachine, location: e.target.value})} />
                </div>
                <button type="submit" className="md:col-span-2 py-3 bg-brand-blue text-white font-bold rounded-lg mt-4">Salvar Equipamento</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT MODAL */}
+      {showEditModal && editingMachine && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 no-print">
+          <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+             <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-800">Editar Equipamento</h2>
+              <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
+            </div>
+            <form onSubmit={handleUpdateMachine} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="md:col-span-2">
+                 <label className="block text-sm font-medium text-gray-700">Cliente</label>
+                 <select required className="w-full p-2 border rounded-lg" value={editingMachine.clientId} onChange={e => setEditingMachine({...editingMachine, clientId: e.target.value})}>
+                   <option value="">Selecione o cliente...</option>
+                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                 </select>
+               </div>
+               <div>
+                  <label className="block text-sm font-medium text-gray-700">Marca</label>
+                  <input required className="w-full p-2 border rounded-lg" value={editingMachine.brand || ''} onChange={e => setEditingMachine({...editingMachine, brand: e.target.value})} />
+               </div>
+               <div>
+                  <label className="block text-sm font-medium text-gray-700">Modelo</label>
+                  <input required className="w-full p-2 border rounded-lg" value={editingMachine.model || ''} onChange={e => setEditingMachine({...editingMachine, model: e.target.value})} />
+               </div>
+               <div>
+                  <label className="block text-sm font-medium text-gray-700">Tipo</label>
+                  <select className="w-full p-2 border rounded-lg" value={editingMachine.type} onChange={e => setEditingMachine({...editingMachine, type: e.target.value as any})}>
+                    <option>Split</option><option>Cassete</option><option>Piso Teto</option><option>VRF</option><option>Janela</option>
+                  </select>
+               </div>
+               <div>
+                  <label className="block text-sm font-medium text-gray-700">BTUs</label>
+                  <input type="number" className="w-full p-2 border rounded-lg" value={editingMachine.capacityBTU || ''} onFocus={(e) => e.target.select()} onChange={e => setEditingMachine({...editingMachine, capacityBTU: Number(e.target.value)})} />
+               </div>
+               <div>
+                  <label className="block text-sm font-medium text-gray-700">Nº Série</label>
+                  <input className="w-full p-2 border rounded-lg" value={editingMachine.serialNumber || ''} onChange={e => setEditingMachine({...editingMachine, serialNumber: e.target.value})} />
+               </div>
+               <div>
+                  <label className="block text-sm font-medium text-gray-700">Local Instalação</label>
+                  <input className="w-full p-2 border rounded-lg" value={editingMachine.location || ''} onChange={e => setEditingMachine({...editingMachine, location: e.target.value})} />
+               </div>
+               <button type="submit" className="md:col-span-2 py-3 bg-brand-blue text-white font-bold rounded-lg mt-4">Atualizar Equipamento</button>
             </form>
           </div>
         </div>
