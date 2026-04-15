@@ -3,7 +3,7 @@ import { dbService } from '../services/db';
 import { auth } from '../services/firebase';
 import { Machine, Client, PMOC as PMOCType } from '../types';
 import { Logo } from '../components/Logo';
-import { CheckCircle, FileText, X, Printer, Thermometer, Activity, Zap, MessageCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, FileText, X, Printer, Thermometer, Activity, Zap, MessageCircle, Loader2, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -111,43 +111,71 @@ export const PMOC: React.FC = () => {
     await generateAndSend(phone);
   };
 
-  const generateAndSend = async (phone: string) => {
+  const generatePDF = async () => {
     const element = document.getElementById('pmoc-document');
-    if (!element) return;
+    if (!element) throw new Error('Elemento do documento não encontrado');
 
+    // Wait for images to load
+    const images = Array.from(element.getElementsByTagName('img'));
+    await Promise.all(images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(resolve => {
+        img.onload = resolve;
+        img.onerror = resolve;
+      });
+    }));
+
+    const canvas = await html2canvas(element, {
+      scale: 1.5,
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+      width: element.offsetWidth,
+      height: element.offsetHeight,
+      onclone: (clonedDoc) => {
+        const el = clonedDoc.getElementById('pmoc-document');
+        if (el) {
+          el.style.boxShadow = 'none';
+          el.style.margin = '0';
+        }
+      }
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.9);
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const imgProps = pdf.getImageProperties(imgData);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+    
+    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+    return pdf;
+  };
+
+  const handleDownloadPDF = async () => {
+    setIsGeneratingPDF(true);
+    try {
+      const pdf = await generatePDF();
+      const fileName = `PMOC_${client?.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      console.error('Error downloading PDF', err);
+      alert('Erro ao baixar PDF. Tente usar o botão de Imprimir e salvar como PDF manualmente.');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const generateAndSend = async (phone: string) => {
     setIsGeneratingPDF(true);
 
     try {
-      // Use html2canvas to capture the element
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: element.offsetWidth,
-        height: element.offsetHeight,
-        onclone: (clonedDoc) => {
-          const el = clonedDoc.getElementById('pmoc-document');
-          if (el) el.style.boxShadow = 'none';
-        }
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      
-      // Create PDF
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      
+      const pdf = await generatePDF();
       const fileName = `PMOC_${client?.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
       pdf.save(fileName);
       
@@ -163,7 +191,7 @@ export const PMOC: React.FC = () => {
       
     } catch (err) {
       console.error('Error generating PDF', err);
-      alert('Erro ao gerar PDF. Tente usar o botão de Imprimir e salvar como PDF manualmente.');
+      alert('Erro ao gerar PDF para o WhatsApp. Tente baixar o PDF primeiro ou usar o botão de Imprimir.');
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -332,6 +360,18 @@ export const PMOC: React.FC = () => {
            </div>
            
            <div className="fixed top-4 right-4 no-print z-50 flex gap-2">
+               <button 
+                  disabled={isGeneratingPDF}
+                  onClick={handleDownloadPDF} 
+                  className="bg-brand-orange hover:bg-orange-600 text-white px-6 py-2.5 rounded-full shadow-xl flex items-center gap-2 font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+               >
+                  {isGeneratingPDF ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <Download size={18} />
+                  )}
+                  Baixar PDF
+               </button>
                <button 
                   disabled={isGeneratingPDF}
                   onClick={handleSendWhatsApp} 
