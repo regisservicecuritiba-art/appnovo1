@@ -4,8 +4,8 @@ import { auth } from '../services/firebase';
 import { Machine, Client, PMOC as PMOCType } from '../types';
 import { Logo } from '../components/Logo';
 import { CheckCircle, FileText, X, Printer, Thermometer, Activity, Zap, MessageCircle, Loader2 } from 'lucide-react';
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 export const PMOC: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -97,38 +97,48 @@ export const PMOC: React.FC = () => {
 
     setIsGeneratingPDF(true);
 
-    const opt = {
-      margin: 10,
-      filename: `PMOC_${client?.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
+    try {
+      // Use html2canvas to capture the element
+      const canvas = await html2canvas(element, {
+        scale: 2,
         useCORS: true,
         logging: false,
-        letterRendering: true
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
-    };
+        backgroundColor: '#ffffff',
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight
+      });
 
-    try {
-      // Generate and download PDF
-      await html2pdf().set(opt).from(element).save();
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      
+      const fileName = `PMOC_${client?.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+      pdf.save(fileName);
       
       // Prepare WhatsApp link
       const cleanPhone = phone.replace(/\D/g, '');
-      // Add 55 prefix if not present and it looks like a Brazilian number
       const finalPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
       
       const message = encodeURIComponent(`Olá ${client?.name}, segue o documento PMOC referente à vistoria realizada em ${new Date().toLocaleDateString('pt-BR')}. O arquivo PDF foi baixado em seu dispositivo.`);
       
-      // Small delay to ensure download starts before opening WhatsApp
       setTimeout(() => {
         window.open(`https://wa.me/${finalPhone}?text=${message}`, '_blank');
       }, 1000);
       
     } catch (err) {
       console.error('Error generating PDF', err);
-      alert('Erro ao gerar PDF para o WhatsApp. Por favor, tente novamente.');
+      alert('Erro ao gerar PDF. Tente usar o botão de Imprimir e salvar como PDF manualmente.');
     } finally {
       setIsGeneratingPDF(false);
     }
