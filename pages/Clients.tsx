@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dbService } from '../services/db';
-import { Client, Machine } from '../types';
-import { Search, Plus, Phone, MapPin, Building, X, Fan, Wrench, Edit2, Trash2, LocateFixed, Loader2 } from 'lucide-react';
+import { Client, Machine, PMOC as PMOCType } from '../types';
+import { Search, Plus, Phone, MapPin, Building, X, Fan, Wrench, Edit2, Trash2, LocateFixed, Loader2, History as HistoryIcon, ExternalLink } from 'lucide-react';
 
 export const Clients: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
+  const [pmocs, setPmocs] = useState<PMOCType[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Modals State
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPMOCHistoryModal, setShowPMOCHistoryModal] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
@@ -34,6 +36,11 @@ export const Clients: React.FC = () => {
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    const unsub = dbService.subscribePMOCs(setPmocs);
+    return () => unsub();
+  }, []);
+
   const filteredClients = clients.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     (c.document && c.document.includes(searchTerm))
@@ -42,6 +49,16 @@ export const Clients: React.FC = () => {
   const clientMachines = selectedClient 
     ? machines.filter(m => m.clientId === selectedClient.id)
     : [];
+
+  const clientPMOCs = selectedClient
+    ? pmocs.filter(p => p.clientId === selectedClient.id)
+    : [];
+
+  const handleOpenPublicPMOC = (pmocId: string) => {
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}#/pmoc-public/${pmocId}`;
+    window.open(shareUrl, '_blank');
+  };
 
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -233,6 +250,16 @@ export const Clients: React.FC = () => {
                   <Edit2 size={16} />
                 </button>
                 <button 
+                  onClick={() => {
+                    setSelectedClient(client);
+                    setShowPMOCHistoryModal(true);
+                  }}
+                  className="p-2 text-gray-400 hover:text-brand-orange hover:bg-orange-50 rounded-lg transition-colors"
+                  title="Histórico PMOC"
+                >
+                  <HistoryIcon size={16} />
+                </button>
+                <button 
                   onClick={() => handleDeleteClient(client.id)}
                   className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   title="Excluir Cliente"
@@ -250,6 +277,50 @@ export const Clients: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* PMOC HISTORY MODAL */}
+      {showPMOCHistoryModal && selectedClient && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-800">Histórico PMOC</h2>
+              <button onClick={() => setShowPMOCHistoryModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
+            </div>
+            
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+              <p className="text-sm text-gray-500 mb-4">Documentos emitidos para <strong>{selectedClient.name}</strong></p>
+              
+              {clientPMOCs.length > 0 ? (
+                clientPMOCs.map(pmoc => (
+                  <div key={pmoc.id} className="p-4 border border-gray-100 rounded-xl bg-gray-50 flex justify-between items-center hover:border-brand-blue transition-colors">
+                    <div>
+                      <p className="font-bold text-gray-800">{new Date(pmoc.createdAt || pmoc.date).toLocaleDateString('pt-BR')}</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-widest">{pmoc.machines.length} Equipamento(s)</p>
+                    </div>
+                    <button 
+                      onClick={() => handleOpenPublicPMOC(pmoc.id)}
+                      className="p-2 bg-white text-brand-blue border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2 text-xs font-bold"
+                    >
+                      <ExternalLink size={14} /> Visualizar
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                  Nenhum PMOC emitido para este cliente.
+                </div>
+              )}
+            </div>
+            
+            <button 
+              onClick={() => setShowPMOCHistoryModal(false)}
+              className="w-full mt-6 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* DELETE CONFIRMATION MODAL */}
       {showDeleteModal && (
@@ -358,6 +429,12 @@ export const Clients: React.FC = () => {
                     </p>
                  </div>
                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setShowPMOCHistoryModal(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-brand-orange text-xs font-bold rounded hover:bg-orange-100 transition-colors"
+                    >
+                      <HistoryIcon size={14} /> Histórico PMOC
+                    </button>
                     <button 
                       onClick={() => {
                         handleEditClient(selectedClient);

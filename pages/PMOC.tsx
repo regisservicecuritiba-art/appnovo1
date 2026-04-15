@@ -383,30 +383,6 @@ export const PMOC: React.FC = () => {
                   Enviar Link por Zap
                </button>
                <button 
-                  disabled={isGeneratingPDF}
-                  onClick={handleDownloadPDF} 
-                  className="bg-brand-orange hover:bg-orange-600 text-white px-6 py-2.5 rounded-full shadow-xl flex items-center gap-2 font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-               >
-                  {isGeneratingPDF ? (
-                    <Loader2 size={18} className="animate-spin" />
-                  ) : (
-                    <Download size={18} />
-                  )}
-                  Baixar PDF
-               </button>
-               <button 
-                  disabled={isGeneratingPDF}
-                  onClick={handleSendWhatsApp} 
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-full shadow-xl flex items-center gap-2 font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-               >
-                  {isGeneratingPDF ? (
-                    <Loader2 size={18} className="animate-spin" />
-                  ) : (
-                    <MessageCircle size={18} />
-                  )}
-                  Enviar por Zap
-               </button>
-               <button 
                   onClick={handlePrint} 
                   className="bg-brand-blue hover:bg-blue-600 text-white px-6 py-2.5 rounded-full shadow-xl flex items-center gap-2 font-bold transition-transform hover:scale-105 active:scale-95"
                >

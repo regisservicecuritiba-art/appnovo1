@@ -24,13 +24,15 @@ service cloud.firestore {
 
     // Clientes
     match /clients/{clientId} {
-      allow read: if isAuthenticated();
+      allow get: if true; // Allow public viewing for PMOC
+      allow list: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
     // Equipamentos
     match /machines/{machineId} {
-      allow read: if isAuthenticated();
+      allow get: if true; // Allow public viewing for PMOC
+      allow list: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
@@ -55,19 +57,6 @@ service cloud.firestore {
     // PMOC
     match /pmocs/{pmocId} {
       allow get: if true; // Allow public viewing of a single PMOC via link
-      allow list: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-
-    // Allow reading clients and machines for PMOC viewing
-    match /clients/{clientId} {
-      allow get: if true; // Allow public get for PMOC details
-      allow list: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-
-    match /machines/{machineId} {
-      allow get: if true; // Allow public get for PMOC details
       allow list: if isAuthenticated();
       allow write: if isAuthenticated();
     }
