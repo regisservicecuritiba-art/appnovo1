@@ -32,7 +32,7 @@ export const PMOC: React.FC = () => {
   const [showParamsModal, setShowParamsModal] = useState(false);
   const [showPhonePrompt, setShowPhonePrompt] = useState(false);
   const [tempPhone, setTempPhone] = useState('');
-  const [selectedProcedures, setSelectedProcedures] = useState<string[]>(PROCEDURES);
+  const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
   const [readings, setReadings] = useState({
     tempIn: '7.5',
     tempOut: '22.0',
@@ -122,10 +122,15 @@ export const PMOC: React.FC = () => {
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
+        allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
-        width: 794, // A4 width in px at 96dpi (approx)
-        windowWidth: 794
+        width: element.offsetWidth,
+        height: element.offsetHeight,
+        onclone: (clonedDoc) => {
+          const el = clonedDoc.getElementById('pmoc-document');
+          if (el) el.style.boxShadow = 'none';
+        }
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -260,7 +265,7 @@ export const PMOC: React.FC = () => {
                     <Activity size={14} /> Procedimentos Realizados
                  </h3>
                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    {['Limpeza de Filtros', 'Limpeza de Bandeja', 'Verificação Drenagem', 'Limpeza Serpentinas', 'Verificação Elétrica', 'Medição de Gás', 'Aplicação Bactericida', 'Aperto de Bornes', 'Teste Remoto'].map(item => (
+                    {selectedProcedures.map(item => (
                        <div key={item} className="flex items-center gap-2 border border-gray-200 p-2 rounded bg-white">
                           <div 
                             className="w-4 h-4 text-white flex items-center justify-center text-[10px] font-bold rounded shadow-sm" 
@@ -508,7 +513,31 @@ export const PMOC: React.FC = () => {
                       </div>
                    </div>
 
-                   <button type="submit" className="w-full mt-6 py-3 bg-brand-blue text-white font-bold rounded-lg hover:bg-blue-600 transition-colors shadow-lg">
+                   <div className="pt-4 border-t">
+                       <label className="block text-xs font-bold text-gray-500 mb-3 uppercase">Procedimentos Realizados</label>
+                       <div className="grid grid-cols-2 gap-2">
+                          {PROCEDURES.map(proc => (
+                             <div 
+                               key={proc}
+                               onClick={() => toggleProcedure(proc)}
+                               className={`p-2 border rounded-lg cursor-pointer flex items-center gap-2 transition-colors ${
+                                 selectedProcedures.includes(proc) 
+                                   ? 'bg-blue-50 border-brand-blue text-brand-blue' 
+                                   : 'bg-gray-50 border-gray-200 text-gray-500'
+                               }`}
+                             >
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                                  selectedProcedures.includes(proc) ? 'bg-brand-blue border-brand-blue text-white' : 'bg-white border-gray-300'
+                                }`}>
+                                   {selectedProcedures.includes(proc) && <CheckCircle size={10} />}
+                                </div>
+                                <span className="text-xs font-medium">{proc}</span>
+                             </div>
+                          ))}
+                       </div>
+                    </div>
+
+                    <button type="submit" className="w-full mt-6 py-3 bg-brand-blue text-white font-bold rounded-lg hover:bg-blue-600 transition-colors shadow-lg">
                       Confirmar e Gerar Documento
                    </button>
                 </form>
