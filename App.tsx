@@ -14,6 +14,7 @@ import { Maintenance } from './pages/Maintenance';
 import { History } from './pages/History';
 import { FinancialReports } from './pages/FinancialReports';
 import { Parts } from './pages/PartsAndServices';
+import { PublicPMOC } from './pages/PublicPMOC';
 import { User } from './types';
 import { Logo } from './components/Logo';
 
@@ -92,27 +93,30 @@ const App: React.FC = () => {
 
   return (
     <HashRouter>
-      {!user ? (
-        <Login />
-      ) : (
-        <>
-          <Layout user={user} onLogout={handleLogout}>
-            <Routes>
-              <Route path="/" element={<Dashboard user={user} />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/machines" element={<Machines />} />
-              <Route path="/orders" element={<ServiceOrders />} />
-              <Route path="/maintenance" element={<Maintenance user={user} />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/pmoc" element={<PMOC />} />
-              <Route path="/parts" element={<Parts />} />
-              <Route path="/reports" element={<FinancialReports />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </Layout>
-          <OfflineStatus />
-        </>
-      )}
+      <Routes>
+        <Route path="/pmoc-public/:id" element={<PublicPMOC />} />
+        <Route path="*" element={
+          !user ? (
+            <Login />
+          ) : (
+            <Layout user={user} onLogout={handleLogout}>
+              <Routes>
+                <Route path="/" element={<Dashboard user={user} />} />
+                <Route path="/clients" element={<Clients />} />
+                <Route path="/machines" element={<Machines />} />
+                <Route path="/orders" element={<ServiceOrders />} />
+                <Route path="/maintenance" element={<Maintenance user={user} />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/pmoc" element={<PMOC />} />
+                <Route path="/parts" element={<Parts />} />
+                <Route path="/reports" element={<FinancialReports />} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </Layout>
+          )
+        } />
+      </Routes>
+      <OfflineStatus />
     </HashRouter>
   );
 };

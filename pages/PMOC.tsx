@@ -3,7 +3,7 @@ import { dbService } from '../services/db';
 import { auth } from '../services/firebase';
 import { Machine, Client, PMOC as PMOCType } from '../types';
 import { Logo } from '../components/Logo';
-import { CheckCircle, FileText, X, Printer, Thermometer, Activity, Zap, MessageCircle, Loader2, Download } from 'lucide-react';
+import { CheckCircle, FileText, X, Printer, Thermometer, Activity, Zap, MessageCircle, Loader2, Download, Share2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -27,6 +27,7 @@ export const PMOC: React.FC = () => {
   const [selectedMachines, setSelectedMachines] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [generatedPmocId, setGeneratedPmocId] = useState<string | null>(null);
   
   // State for the parameters modal
   const [showParamsModal, setShowParamsModal] = useState(false);
@@ -87,7 +88,8 @@ export const PMOC: React.FC = () => {
             status: 'Gerado'
         };
 
-        await dbService.addPMOC(newPMOC as any);
+        const id = await dbService.addPMOC(newPMOC as any);
+        setGeneratedPmocId(id);
     } catch (err) {
         console.error("Failed to save PMOC history", err);
     }
@@ -126,9 +128,8 @@ export const PMOC: React.FC = () => {
     }));
 
     const canvas = await html2canvas(element, {
-      scale: 1.5,
+      scale: 1, // Reduced scale for better compatibility
       useCORS: true,
-      allowTaint: true,
       logging: false,
       backgroundColor: '#ffffff',
       width: element.offsetWidth,
@@ -142,7 +143,7 @@ export const PMOC: React.FC = () => {
       }
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.9);
+    const imgData = canvas.toDataURL('image/png'); // Use PNG for better quality at lower scale
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -153,8 +154,22 @@ export const PMOC: React.FC = () => {
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
     
-    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
     return pdf;
+  };
+
+  const handleShareLink = () => {
+    if (!generatedPmocId || !client) return;
+    
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}#/pmoc-public/${generatedPmocId}`;
+    
+    const cleanPhone = (client.whatsapp || client.phone || '').replace(/\D/g, '');
+    const finalPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+    
+    const message = encodeURIComponent(`Olá ${client.name}, segue o link para visualização do seu documento PMOC: ${shareUrl}`);
+    
+    window.open(`https://wa.me/${finalPhone}?text=${message}`, '_blank');
   };
 
   const handleDownloadPDF = async () => {
@@ -336,7 +351,7 @@ export const PMOC: React.FC = () => {
                     <div className="bg-white p-1 border border-gray-200 rounded shrink-0">
                         {/* QR Code - Using simpler API or ensuring image loads */}
                         <img 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=PMOC_${clientId}_${new Date().toISOString()}`} 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=PMOC_${generatedPmocId || clientId}_${new Date().toISOString()}`} 
                             className="w-20 h-20" 
                             alt="QR Autenticação"
                             style={{ display: 'block' }}
@@ -345,7 +360,7 @@ export const PMOC: React.FC = () => {
                     <div>
                         <p className="text-xs font-bold text-gray-900 uppercase">Autenticação Digital</p>
                         <p className="text-[10px] text-gray-500 font-mono mt-0.5 max-w-[150px] leading-tight break-all">
-                            ID: {new Date().getTime().toString(16).toUpperCase()}
+                            ID: {generatedPmocId?.substring(0, 8).toUpperCase() || new Date().getTime().toString(16).toUpperCase()}
                         </p>
                     </div>
                  </div>
@@ -360,6 +375,13 @@ export const PMOC: React.FC = () => {
            </div>
            
            <div className="fixed top-4 right-4 no-print z-50 flex gap-2">
+               <button 
+                  onClick={handleShareLink} 
+                  className="bg-brand-blue hover:bg-blue-600 text-white px-6 py-2.5 rounded-full shadow-xl flex items-center gap-2 font-bold transition-all hover:scale-105 active:scale-95"
+               >
+                  <Share2 size={18} />
+                  Enviar Link por Zap
+               </button>
                <button 
                   disabled={isGeneratingPDF}
                   onClick={handleDownloadPDF} 

@@ -249,6 +249,7 @@ class FirestoreDatabase {
     const newPMOC = { ...pmoc, id, createdAt: new Date().toISOString() } as PMOC;
     await localDB.pmocs.add(newPMOC);
     await this.queueSync('pmocs', 'create', newPMOC);
+    return id;
   }
 
   // Manutenções (Sessions)
