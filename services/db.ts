@@ -252,6 +252,11 @@ class FirestoreDatabase {
     return id;
   }
 
+  async deletePMOC(id: string) {
+    await localDB.pmocs.delete(id);
+    await this.queueSync('pmocs', 'delete', { id });
+  }
+
   // Manutenções (Sessions)
   subscribeMaintenanceSessions(callback: (sessions: MaintenanceSession[]) => void, status?: 'Ativa' | 'Finalizada') {
     const observable = liveQuery(() => {

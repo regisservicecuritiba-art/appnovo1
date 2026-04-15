@@ -3,7 +3,7 @@ import { dbService } from '../services/db';
 import { auth } from '../services/firebase';
 import { Machine, Client, PMOC as PMOCType } from '../types';
 import { Logo } from '../components/Logo';
-import { CheckCircle, FileText, X, Printer, Thermometer, Activity, Zap, MessageCircle, Loader2, Download, Share2 } from 'lucide-react';
+import { CheckCircle, FileText, X, Printer, Thermometer, Activity, Zap, MessageCircle, Loader2, Download, Share2, History as HistoryIcon, ExternalLink, Trash2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -29,6 +29,23 @@ export const PMOC: React.FC = () => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [generatedPmocId, setGeneratedPmocId] = useState<string | null>(null);
   
+  // History state
+  const [pmocs, setPmocs] = useState<PMOCType[]>([]);
+  const [viewingPmoc, setViewingPmoc] = useState<PMOCType | null>(null);
+
+  const handleDeletePmoc = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (window.confirm('Tem certeza que deseja excluir este documento PMOC permanentemente?')) {
+      try {
+        await dbService.deletePMOC(id);
+        if (viewingPmoc?.id === id) setViewingPmoc(null);
+      } catch (err) {
+        console.error("Failed to delete PMOC", err);
+        alert("Erro ao excluir o documento.");
+      }
+    }
+  };
+  
   // State for the parameters modal
   const [showParamsModal, setShowParamsModal] = useState(false);
   const [showPhonePrompt, setShowPhonePrompt] = useState(false);
@@ -44,14 +61,20 @@ export const PMOC: React.FC = () => {
   useEffect(() => {
     const unsubClients = dbService.subscribeClients(setClients);
     const unsubMachines = dbService.subscribeMachines(setMachines);
+    const unsubPmocs = dbService.subscribePMOCs(setPmocs);
     return () => {
       unsubClients();
       unsubMachines();
+      unsubPmocs();
     };
   }, []);
 
   const client = clients.find(c => c.id === clientId);
   const clientMachines = machines.filter(m => m.clientId === clientId);
+
+  const getClientName = (id: string) => {
+    return clients.find(c => c.id === id)?.name || 'Cliente não encontrado';
+  };
 
   const toggleMachine = (id: string) => {
     if (selectedMachines.includes(id)) {
@@ -422,6 +445,59 @@ export const PMOC: React.FC = () => {
              </select>
           </div>
 
+          {/* Recent PMOCs List - Only show if no client selected */}
+          {!clientId && (
+             <div className="mt-8 border-t pt-8">
+                <div className="flex items-center gap-2 mb-4">
+                   <HistoryIcon size={20} className="text-brand-orange" />
+                   <h2 className="text-lg font-bold text-gray-800">PMOCs Emitidos Recentemente</h2>
+                </div>
+                
+                <div className="space-y-3">
+                   {pmocs.length === 0 ? (
+                      <p className="text-gray-400 text-sm italic">Nenhum PMOC emitido ainda.</p>
+                   ) : (
+                      pmocs
+                        .slice(0, 10) // Already sorted by createdAt in dbService
+                        .map(pmoc => (
+                           <div 
+                             key={pmoc.id}
+                             onClick={() => setViewingPmoc(pmoc)}
+                             className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-brand-blue cursor-pointer transition-all group"
+                           >
+                              <div className="flex items-center gap-3">
+                                 <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-brand-blue shadow-sm">
+                                    <FileText size={20} />
+                                 </div>
+                                 <div>
+                                    <p className="font-bold text-gray-800 group-hover:text-brand-blue transition-colors">
+                                       {getClientName(pmoc.clientId)}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                       Emitido em: {new Date(pmoc.date).toLocaleDateString('pt-BR')} às {new Date(pmoc.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                 </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                 <span className="text-[10px] font-bold uppercase px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                                    {pmoc.status || 'Gerado'}
+                                 </span>
+                                 <button 
+                                   onClick={(e) => handleDeletePmoc(pmoc.id, e)}
+                                   className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                   title="Excluir PMOC"
+                                 >
+                                    <Trash2 size={16} />
+                                 </button>
+                                 <ExternalLink size={16} className="text-gray-400 group-hover:text-brand-blue" />
+                              </div>
+                           </div>
+                        ))
+                   )}
+                </div>
+             </div>
+          )}
+
           {clientMachines.length > 0 && (
              <div className="space-y-4">
                 <div className="flex justify-between items-center border-b pb-2">
@@ -624,6 +700,73 @@ export const PMOC: React.FC = () => {
                      className="w-full py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg flex items-center justify-center gap-2"
                    >
                       Gerar PDF e Enviar
+                   </button>
+                </div>
+             </div>
+          </div>
+       )}
+
+       {/* Viewing Historical PMOC Modal */}
+       {viewingPmoc && (
+          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+             <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+                <div className="flex justify-between items-center mb-6 border-b pb-4">
+                   <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                      <FileText className="text-brand-blue"/> 
+                      PMOC Emitido
+                   </h2>
+                   <button onClick={() => setViewingPmoc(null)}><X size={24} className="text-gray-400 hover:text-gray-600" /></button>
+                </div>
+                
+                <div className="space-y-4 mb-8">
+                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                      <p className="text-xs font-bold text-gray-400 uppercase mb-1">Cliente</p>
+                      <p className="font-bold text-gray-800 text-lg">{getClientName(viewingPmoc.clientId)}</p>
+                      <p className="text-xs text-gray-500 mt-2">
+                         Data: {new Date(viewingPmoc.date).toLocaleDateString('pt-BR')}
+                      </p>
+                   </div>
+                   
+                   <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                      <CheckCircle size={16} className="text-blue-500" />
+                      <span>{viewingPmoc.machines.length} máquinas incluídas neste laudo.</span>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                   <button 
+                      onClick={() => {
+                         const baseUrl = window.location.origin + window.location.pathname;
+                         const shareUrl = `${baseUrl}#/pmoc-public/${viewingPmoc.id}`;
+                         const message = encodeURIComponent(`Olá, segue o link para visualizar o PMOC digital: ${shareUrl}`);
+                         window.open(`https://wa.me/?text=${message}`, '_blank');
+                      }}
+                      className="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors"
+                   >
+                      <MessageCircle size={18} /> Enviar Link por Zap
+                   </button>
+                   
+                   <button 
+                      onClick={() => {
+                         window.open(`${window.location.origin}${window.location.pathname}#/pmoc-public/${viewingPmoc.id}`, '_blank');
+                      }}
+                      className="w-full py-3 bg-brand-blue hover:bg-blue-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors"
+                   >
+                      <Printer size={18} /> Visualizar e Imprimir
+                   </button>
+
+                   <button 
+                      onClick={() => handleDeletePmoc(viewingPmoc.id)}
+                      className="w-full py-3 bg-white border border-red-200 text-red-500 hover:bg-red-50 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors"
+                   >
+                      <Trash2 size={18} /> Excluir Documento
+                   </button>
+                   
+                   <button 
+                      onClick={() => setViewingPmoc(null)}
+                      className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-xl transition-colors"
+                   >
+                      Fechar
                    </button>
                 </div>
              </div>

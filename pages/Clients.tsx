@@ -60,6 +60,17 @@ export const Clients: React.FC = () => {
     window.open(shareUrl, '_blank');
   };
 
+  const handleDeletePmoc = async (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir este documento PMOC permanentemente?')) {
+      try {
+        await dbService.deletePMOC(id);
+      } catch (err) {
+        console.error("Failed to delete PMOC", err);
+        alert("Erro ao excluir o documento.");
+      }
+    }
+  };
+
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
       alert('Geolocalização não é suportada pelo seu navegador.');
@@ -297,12 +308,21 @@ export const Clients: React.FC = () => {
                       <p className="font-bold text-gray-800">{new Date(pmoc.createdAt || pmoc.date).toLocaleDateString('pt-BR')}</p>
                       <p className="text-xs text-gray-500 uppercase tracking-widest">{pmoc.machines.length} Equipamento(s)</p>
                     </div>
-                    <button 
-                      onClick={() => handleOpenPublicPMOC(pmoc.id)}
-                      className="p-2 bg-white text-brand-blue border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2 text-xs font-bold"
-                    >
-                      <ExternalLink size={14} /> Visualizar
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleDeletePmoc(pmoc.id)}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        title="Excluir PMOC"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                      <button 
+                        onClick={() => handleOpenPublicPMOC(pmoc.id)}
+                        className="p-2 bg-white text-brand-blue border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2 text-xs font-bold"
+                      >
+                        <ExternalLink size={14} /> Visualizar
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (
