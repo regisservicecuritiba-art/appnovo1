@@ -3,7 +3,9 @@ import { dbService } from '../services/db';
 import { auth } from '../services/firebase';
 import { Machine, Client, PMOC as PMOCType } from '../types';
 import { Logo } from '../components/Logo';
-import { CheckCircle, FileText, X, Printer, Thermometer, Activity, Zap } from 'lucide-react';
+import { CheckCircle, FileText, X, Printer, Thermometer, Activity, Zap, MessageCircle, Loader2 } from 'lucide-react';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 export const PMOC: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -12,9 +14,12 @@ export const PMOC: React.FC = () => {
   const [clientId, setClientId] = useState('');
   const [selectedMachines, setSelectedMachines] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   
   // State for the parameters modal
   const [showParamsModal, setShowParamsModal] = useState(false);
+  const [showPhonePrompt, setShowPhonePrompt] = useState(false);
+  const [tempPhone, setTempPhone] = useState('');
   const [readings, setReadings] = useState({
     tempIn: '7.5',
     tempOut: '22.0',
@@ -74,11 +79,67 @@ export const PMOC: React.FC = () => {
     window.print();
   };
 
+  const handleSendWhatsApp = async () => {
+    if (!client) return;
+    
+    const phone = client.whatsapp || client.phone;
+    if (!phone) {
+      setShowPhonePrompt(true);
+      return;
+    }
+    
+    await generateAndSend(phone);
+  };
+
+  const generateAndSend = async (phone: string) => {
+    const element = document.getElementById('pmoc-document');
+    if (!element) return;
+
+    setIsGeneratingPDF(true);
+
+    const opt = {
+      margin: 10,
+      filename: `PMOC_${client?.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true,
+        logging: false,
+        letterRendering: true
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
+    };
+
+    try {
+      // Generate and download PDF
+      await html2pdf().set(opt).from(element).save();
+      
+      // Prepare WhatsApp link
+      const cleanPhone = phone.replace(/\D/g, '');
+      // Add 55 prefix if not present and it looks like a Brazilian number
+      const finalPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+      
+      const message = encodeURIComponent(`Olá ${client?.name}, segue o documento PMOC referente à vistoria realizada em ${new Date().toLocaleDateString('pt-BR')}. O arquivo PDF foi baixado em seu dispositivo.`);
+      
+      // Small delay to ensure download starts before opening WhatsApp
+      setTimeout(() => {
+        window.open(`https://wa.me/${finalPhone}?text=${message}`, '_blank');
+      }, 1000);
+      
+    } catch (err) {
+      console.error('Error generating PDF', err);
+      alert('Erro ao gerar PDF para o WhatsApp. Por favor, tente novamente.');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   if (isGenerating && client) {
      return (
         <div className="bg-gray-100 min-h-screen p-8 text-sm print:p-0 print:bg-white flex justify-center">
            {/* Page Container A4 */}
            <div 
+              id="pmoc-document"
               className="bg-white shadow-2xl print:shadow-none relative overflow-hidden flex flex-col"
               style={{
                   width: '210mm',
@@ -236,6 +297,18 @@ export const PMOC: React.FC = () => {
            </div>
            
            <div className="fixed top-4 right-4 no-print z-50 flex gap-2">
+               <button 
+                  disabled={isGeneratingPDF}
+                  onClick={handleSendWhatsApp} 
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-full shadow-xl flex items-center gap-2 font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+               >
+                  {isGeneratingPDF ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <MessageCircle size={18} />
+                  )}
+                  Enviar por Zap
+               </button>
                <button 
                   onClick={handlePrint} 
                   className="bg-brand-blue hover:bg-blue-600 text-white px-6 py-2.5 rounded-full shadow-xl flex items-center gap-2 font-bold transition-transform hover:scale-105 active:scale-95"
@@ -412,6 +485,53 @@ export const PMOC: React.FC = () => {
                       Confirmar e Gerar Documento
                    </button>
                 </form>
+             </div>
+          </div>
+       )}
+
+       {/* Phone Prompt Modal */}
+       {showPhonePrompt && (
+          <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+                <div className="flex justify-between items-center mb-4">
+                   <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                      <MessageCircle className="text-green-600" />
+                      WhatsApp do Cliente
+                   </h2>
+                   <button onClick={() => setShowPhonePrompt(false)}><X size={20} className="text-gray-400" /></button>
+                </div>
+                
+                <p className="text-sm text-gray-600 mb-4">
+                   O cliente <strong>{client?.name}</strong> não possui celular cadastrado. Informe o número para envio:
+                </p>
+
+                <div className="space-y-4">
+                   <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Número com DDD</label>
+                      <input 
+                        type="text" 
+                        placeholder="Ex: 41999999999"
+                        className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-green-500 outline-none"
+                        value={tempPhone}
+                        onChange={e => setTempPhone(e.target.value)}
+                        autoFocus
+                      />
+                   </div>
+                   
+                   <button 
+                     onClick={() => {
+                       if (tempPhone.length >= 10) {
+                         setShowPhonePrompt(false);
+                         generateAndSend(tempPhone);
+                       } else {
+                         alert('Por favor, informe um número válido com DDD.');
+                       }
+                     }}
+                     className="w-full py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg flex items-center justify-center gap-2"
+                   >
+                      Gerar PDF e Enviar
+                   </button>
+                </div>
              </div>
           </div>
        )}
