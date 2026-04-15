@@ -7,6 +7,18 @@ import { CheckCircle, FileText, X, Printer, Thermometer, Activity, Zap, MessageC
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
+const PROCEDURES = [
+  'Limpeza de Filtros', 
+  'Limpeza de Bandeja', 
+  'Verificação Drenagem', 
+  'Limpeza Serpentinas', 
+  'Verificação Elétrica', 
+  'Medição de Gás', 
+  'Aplicação Bactericida', 
+  'Aperto de Bornes', 
+  'Teste Remoto'
+];
+
 export const PMOC: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -20,6 +32,7 @@ export const PMOC: React.FC = () => {
   const [showParamsModal, setShowParamsModal] = useState(false);
   const [showPhonePrompt, setShowPhonePrompt] = useState(false);
   const [tempPhone, setTempPhone] = useState('');
+  const [selectedProcedures, setSelectedProcedures] = useState<string[]>(PROCEDURES);
   const [readings, setReadings] = useState({
     tempIn: '7.5',
     tempOut: '22.0',
@@ -47,6 +60,12 @@ export const PMOC: React.FC = () => {
     }
   };
 
+  const toggleProcedure = (proc: string) => {
+    setSelectedProcedures(prev => 
+      prev.includes(proc) ? prev.filter(p => p !== proc) : [...prev, proc]
+    );
+  };
+
   const handleStartGeneration = () => {
      setShowParamsModal(true);
   };
@@ -64,6 +83,7 @@ export const PMOC: React.FC = () => {
             date: new Date().toISOString(),
             machines: selectedMachines,
             readings: readings,
+            procedures: selectedProcedures,
             status: 'Gerado'
         };
 
@@ -104,8 +124,8 @@ export const PMOC: React.FC = () => {
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight
+        width: 794, // A4 width in px at 96dpi (approx)
+        windowWidth: 794
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
