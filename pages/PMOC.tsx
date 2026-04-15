@@ -458,8 +458,7 @@ export const PMOC: React.FC = () => {
                          <div className="relative">
                             <Thermometer className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                             <input 
-                              type="number" 
-                              step="0.1" 
+                              type="text" 
                               className="w-full pl-7 p-2 border rounded-lg" 
                               value={readings.tempIn} 
                               onFocus={(e) => e.target.select()}
@@ -473,8 +472,7 @@ export const PMOC: React.FC = () => {
                          <div className="relative">
                             <Thermometer className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                             <input 
-                              type="number" 
-                              step="0.1" 
+                              type="text" 
                               className="w-full pl-7 p-2 border rounded-lg" 
                               value={readings.tempOut} 
                               onFocus={(e) => e.target.select()}
@@ -499,8 +497,7 @@ export const PMOC: React.FC = () => {
                          <div className="relative">
                             <Zap className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                             <input 
-                              type="number" 
-                              step="0.1" 
+                              type="text" 
                               className="w-full pl-7 p-2 border rounded-lg" 
                               value={readings.current} 
                               onFocus={(e) => e.target.select()}

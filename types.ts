@@ -134,6 +134,7 @@ export interface PMOC {
   technicianId: string;
   machines: any[];
   readings?: any;
+  procedures?: string[];
   status?: string;
   notes?: string;
   createdAt?: string;
